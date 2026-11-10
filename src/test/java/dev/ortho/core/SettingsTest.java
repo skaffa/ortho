@@ -48,7 +48,7 @@ class SettingsTest {
 
 	@Test
 	void configRoundTripsAndSurvivesBrokenFile(@TempDir Path dir) throws Exception {
-		Path file = dir.resolve("ortho.json");
+		Path file = dir.resolve("ortho").resolve("config.json");
 		OrthoConfig c = new OrthoConfig();
 		c.stencil.shape = ShapeType.DOME;
 		c.stencil.sizeX = 31;
@@ -66,7 +66,7 @@ class SettingsTest {
 		Files.writeString(file, "{ not json");
 		OrthoConfig fresh = OrthoConfig.load(file);
 		assertEquals(ShapeType.CIRCLE, fresh.stencil.shape);
-		assertTrue(Files.exists(dir.resolve("ortho.json.broken")));
+		assertTrue(Files.exists(dir.resolve("ortho").resolve("config.json.broken")));
 	}
 
 	@Test

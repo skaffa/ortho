@@ -12,7 +12,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Everything Ortho saves in {@code config/ortho.json}. */
+/** Everything Ortho saves in {@code config/ortho/config.json}. */
 public final class OrthoConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

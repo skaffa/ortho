@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,7 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class Ortho {
 	public static final String MOD_ID = "ortho";
 	public static final Logger LOG = LoggerFactory.getLogger("Ortho");
-	private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("ortho.json");
+	/** All Ortho files live in their own folder: {@code config/ortho/}. */
+	private static final Path DIR = FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
+	private static final Path FILE = DIR.resolve("config.json");
+	/** Where older versions kept the config; moved into {@link #DIR} on first load. */
+	private static final Path LEGACY_FILE = FabricLoader.getInstance().getConfigDir().resolve("ortho.json");
 
 	public static OrthoConfig config = new OrthoConfig();
 	/** Key of the world the player is in, or null when not in a world. */
@@ -52,7 +57,21 @@ public final class Ortho {
 	}
 
 	public static void load() {
+		migrateLegacyFile();
 		config = OrthoConfig.load(FILE).clamp();
+	}
+
+	private static void migrateLegacyFile() {
+		if (Files.exists(FILE) || !Files.isRegularFile(LEGACY_FILE)) {
+			return;
+		}
+		try {
+			Files.createDirectories(DIR);
+			Files.move(LEGACY_FILE, FILE);
+			LOG.info("Moved {} to {}", LEGACY_FILE, FILE);
+		} catch (IOException e) {
+			LOG.warn("Could not move {} to {}", LEGACY_FILE, FILE, e);
+		}
 	}
 
 	/** Saves soon (coalesces bursts of changes, such as holding a + button). */
