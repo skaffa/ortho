@@ -2,7 +2,6 @@ package dev.ortho.core;
 
 /** Shape settings: what to draw and how it is oriented. Saved as JSON, so fields stay public and plain. */
 public final class Stencil {
-	public static final int MAX_SIZE = 256;
 	public static final int MAX_THICKNESS = 16;
 
 	public ShapeType shape = ShapeType.CIRCLE;
@@ -59,7 +58,6 @@ public final class Stencil {
 			case CAPS -> caps = v != 0;
 			case QUARTER -> quarter = v != 0;
 		}
-		clamp();
 	}
 
 	public static int min(ShapeType.Param.Kind k) {
@@ -71,17 +69,23 @@ public final class Stencil {
 		};
 	}
 
-	public static int max(ShapeType.Param.Kind k) {
+	/** Upper bound of a setting; sizes are bounded by {@code maxSize} (the user's size limit). */
+	public static int max(ShapeType.Param.Kind k, int maxSize) {
 		return switch (k) {
 			case SIDES -> 16;
-			case DEPTH -> 64;
+			case DEPTH -> Math.min(64, maxSize);
 			case CAPS, QUARTER -> 1;
-			default -> MAX_SIZE;
+			default -> maxSize;
 		};
 	}
 
-	/** Brings every value into range (also fixes hand-edited or old config files). */
+	/** Brings every value into range with the default size limit. */
 	public Stencil clamp() {
+		return clamp(Voxelizer.Limits.DEFAULT_SIZE);
+	}
+
+	/** Brings every value into range (also fixes hand-edited or old config files). */
+	public Stencil clamp(int maxSize) {
 		if (shape == null) {
 			shape = ShapeType.CIRCLE;
 		}
@@ -91,7 +95,7 @@ public final class Stencil {
 		for (ShapeType.Param.Kind k : ShapeType.Param.Kind.values()) {
 			if (!k.isToggle()) {
 				int v = get(k);
-				int c = Math.max(min(k), Math.min(max(k), v));
+				int c = Math.max(min(k), Math.min(max(k, maxSize), v));
 				if (c != v) {
 					setRaw(k, c);
 				}

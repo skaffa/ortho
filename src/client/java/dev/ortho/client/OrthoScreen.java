@@ -24,7 +24,10 @@ public final class OrthoScreen extends Screen {
 	private static final int GRAY = 0xFFA8A8A8;
 	private static final int ACCENT = 0xFF4FD8E0;
 	private static final int BAD = 0xFFFF6666;
-	private static final int ROW = 22;
+	/** Compact rows so everything fits a 240 px tall GUI (720p at GUI scale 3). */
+	private static final int ROW = 19;
+	private static final int H = 18;
+	private static final int HEADER = 11;
 
 	private final Screen parent;
 	private final List<Label> labels = new ArrayList<>();
@@ -54,19 +57,19 @@ public final class OrthoScreen extends Screen {
 		colW = Math.min(210, (width - 36) / 2);
 		leftX = width / 2 - colW - 8;
 		rightX = width / 2 + 8;
-		topY = 30;
+		topY = 32;
 		Stencil s = Ortho.stencil();
 
 		// ---- shape column ----
 		int y = topY;
 		labels.add(new Label("Shape", leftX, y, ACCENT));
-		y += 12;
+		y += HEADER;
 		addRenderableWidget(Button.builder(Component.literal(s.shape.label + "  ▶"), b -> {
 			ShapeType[] all = ShapeType.values();
 			s.shape = all[(s.shape.ordinal() + 1) % all.length];
 			Ortho.changed();
 			build();
-		}).bounds(leftX, y, colW, 20).tooltip(Tooltip.create(Component.literal("Click for the next shape"))).build());
+		}).bounds(leftX, y, colW, H).tooltip(Tooltip.create(Component.literal("Click for the next shape"))).build());
 		y += ROW;
 		for (ShapeType.Param p : s.shape.params) {
 			ShapeType.Param.Kind k = p.kind();
@@ -79,7 +82,7 @@ public final class OrthoScreen extends Screen {
 				y = stepper(leftX, y, p.label(), () -> s.get(k), v -> {
 					s.set(k, v);
 					Ortho.changed();
-				}, 1, Stencil.min(k), Stencil.max(k));
+				}, 1, Stencil.min(k), Stencil.max(k, Ortho.config.maxSize));
 			}
 		}
 		y = toggle(leftX, y, "Hollow", () -> s.hollow, v -> {
@@ -97,15 +100,7 @@ public final class OrthoScreen extends Screen {
 		// ---- placement column ----
 		y = topY;
 		labels.add(new Label("Placement", rightX, y, ACCENT));
-		y += 12;
-		addRenderableWidget(Button.builder(Component.literal("Anchor at my feet"), b -> {
-			if (minecraft.player != null) {
-				var pos = minecraft.player.blockPosition();
-				Ortho.anchor(pos.getX(), pos.getY(), pos.getZ());
-			}
-		}).bounds(rightX, y, colW, 20).tooltip(Tooltip.create(Component.literal(
-				"Or aim at a block in the world and press the anchor key (G)"))).build());
-		y += ROW;
+		y += HEADER;
 		y = cycle(rightX, y, "Up axis", List.of(Stencil.Axis.values()), () -> s.up, v -> {
 			s.up = v;
 			Ortho.changed();
@@ -122,7 +117,7 @@ public final class OrthoScreen extends Screen {
 		y = mirrorRow(rightX, y);
 
 		labels.add(new Label("Display", rightX, y + 2, ACCENT));
-		y += 14;
+		y += HEADER + 1;
 		OrthoConfig cfg = Ortho.config;
 		y = toggle(rightX, y, "Show finished", () -> cfg.showDone, v -> {
 			cfg.showDone = v;
@@ -138,17 +133,25 @@ public final class OrthoScreen extends Screen {
 			Ortho.markDirty();
 		}, 8, 8, 256);
 
+		// footer
+		addRenderableWidget(Button.builder(Component.literal("Anchor at my feet"), b -> {
+			if (minecraft.player != null) {
+				var pos = minecraft.player.blockPosition();
+				Ortho.anchor(pos.getX(), pos.getY(), pos.getZ());
+			}
+		}).bounds(width / 2 - 114, height - 23, 150, 20).tooltip(Tooltip.create(Component.literal(
+				"Or aim at a block in the world and press the anchor key (G)"))).build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
-				.bounds(width / 2 - 50, height - 26, 100, 20).build());
+				.bounds(width / 2 + 40, height - 23, 74, 20).build());
 	}
 
 	private int toggle(int x, int y, String label, java.util.function.BooleanSupplier get, java.util.function.Consumer<Boolean> set) {
-		labels.add(new Label(label, x, y + 6, GRAY));
+		labels.add(new Label(label, x, y + 5, GRAY));
 		int bw = colW / 2;
 		addRenderableWidget(Button.builder(onOff(get.getAsBoolean()), b -> {
 			set.accept(!get.getAsBoolean());
 			b.setMessage(onOff(get.getAsBoolean()));
-		}).bounds(x + colW - bw, y, bw, 20).build());
+		}).bounds(x + colW - bw, y, bw, H).build());
 		return y + ROW;
 	}
 
@@ -157,22 +160,22 @@ public final class OrthoScreen extends Screen {
 	}
 
 	private <T> int cycle(int x, int y, String label, List<T> options, java.util.function.Supplier<T> get, java.util.function.Consumer<T> set) {
-		labels.add(new Label(label, x, y + 6, GRAY));
+		labels.add(new Label(label, x, y + 5, GRAY));
 		int bw = colW / 2;
 		addRenderableWidget(Button.builder(Component.literal(String.valueOf(get.get())), b -> {
 			T next = options.get((options.indexOf(get.get()) + 1) % options.size());
 			set.accept(next);
 			b.setMessage(Component.literal(String.valueOf(get.get())));
-		}).bounds(x + colW - bw, y, bw, 20).build());
+		}).bounds(x + colW - bw, y, bw, H).build());
 		return y + ROW;
 	}
 
 	/** Label, then [-] [number] [+]. */
 	private int stepper(int x, int y, String label, IntSupplier get, IntConsumer set, int step, int min, int max) {
-		labels.add(new Label(label, x, y + 6, GRAY));
+		labels.add(new Label(label, x, y + 5, GRAY));
 		int bw = colW / 2;
 		int bx = x + colW - bw;
-		EditBox box = new EditBox(font, bx + 21, y + 1, bw - 42, 18, Component.literal(label));
+		EditBox box = new EditBox(font, bx + 21, y + 1, bw - 42, H - 2, Component.literal(label));
 		box.setMaxLength(5);
 		box.setValue(Integer.toString(get.getAsInt()));
 		box.setResponder(text -> {
@@ -195,17 +198,17 @@ public final class OrthoScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("-"), b -> {
 			set.accept(Math.max(min, get.getAsInt() - step));
 			box.setValue(Integer.toString(get.getAsInt()));
-		}).bounds(bx, y, 20, 20).build());
+		}).bounds(bx, y, 20, H).build());
 		addRenderableWidget(box);
 		addRenderableWidget(Button.builder(Component.literal("+"), b -> {
 			set.accept(Math.min(max, get.getAsInt() + step));
 			box.setValue(Integer.toString(get.getAsInt()));
-		}).bounds(bx + bw - 20, y, 20, 20).build());
+		}).bounds(bx + bw - 20, y, 20, H).build());
 		return y + ROW;
 	}
 
 	private int layerRow(int x, int y) {
-		labels.add(new Label("Layer", x, y + 6, GRAY));
+		labels.add(new Label("Layer", x, y + 5, GRAY));
 		int bw = colW / 2;
 		int bx = x + colW - bw;
 		Button main = Button.builder(layerText(), b -> {
@@ -215,21 +218,21 @@ public final class OrthoScreen extends Screen {
 				Ortho.layer = minecraft.player.blockPosition().getY();
 			}
 			b.setMessage(layerText());
-		}).bounds(bx + 21, y, bw - 42, 20).tooltip(Tooltip.create(Component.literal(
+		}).bounds(bx + 21, y, bw - 42, H).tooltip(Tooltip.create(Component.literal(
 				"Show one Y level only. Hold Left Alt and scroll in the world to move it."))).build();
 		addRenderableWidget(Button.builder(Component.literal("-"), b -> {
 			if (Ortho.layer != null) {
 				Ortho.layer--;
 				main.setMessage(layerText());
 			}
-		}).bounds(bx, y, 20, 20).build());
+		}).bounds(bx, y, 20, H).build());
 		addRenderableWidget(main);
 		addRenderableWidget(Button.builder(Component.literal("+"), b -> {
 			if (Ortho.layer != null) {
 				Ortho.layer++;
 				main.setMessage(layerText());
 			}
-		}).bounds(bx + bw - 20, y, 20, 20).build());
+		}).bounds(bx + bw - 20, y, 20, H).build());
 		refreshers.add(() -> main.setMessage(layerText()));
 		return y + ROW;
 	}
@@ -239,7 +242,7 @@ public final class OrthoScreen extends Screen {
 	}
 
 	private int mirrorRow(int x, int y) {
-		labels.add(new Label("Mirror", x, y + 6, GRAY));
+		labels.add(new Label("Mirror", x, y + 5, GRAY));
 		int bw = colW / 2;
 		int bx = x + colW - bw;
 		Mirror m = Ortho.mirror();
@@ -256,7 +259,7 @@ public final class OrthoScreen extends Screen {
 			}
 			Ortho.markDirty();
 			b.setMessage(mirrorText());
-		}).bounds(bx, y, bw, 20).tooltip(Tooltip.create(Component.literal(
+		}).bounds(bx, y, bw, H).tooltip(Tooltip.create(Component.literal(
 				"Off -> X -> Z. The plane goes through the block you stand on; use /ortho mirror x|z <pos> for an exact spot."))).build();
 		main.active = m != null;
 		addRenderableWidget(main);
@@ -278,11 +281,15 @@ public final class OrthoScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
 		super.extractRenderState(g, mx, my, delta);
-		g.centeredText(font, title, width / 2, 8, WHITE);
+		g.centeredText(font, title, width / 2, 5, WHITE);
 		for (Label l : labels) {
 			g.text(font, Component.literal(l.text()), l.x(), l.y(), l.color());
 		}
-		g.centeredText(font, Component.literal(status()), width / 2, height - 40, Ortho.error != null ? BAD : GRAY);
+		String status = status();
+		if (font.width(status) > width - 12) {
+			status = font.plainSubstrByWidth(status, width - 18) + "...";
+		}
+		g.centeredText(font, Component.literal(status), width / 2, 17, Ortho.error != null ? BAD : GRAY);
 	}
 
 	private static String status() {
@@ -303,6 +310,9 @@ public final class OrthoScreen extends Screen {
 		}
 		if (Ortho.layer != null) {
 			b.append(", ").append(v.countOnLayer(Ortho.layer)).append(" on layer");
+		}
+		if (v.interiorTruncated() && Ortho.config.warnInterior) {
+			b.append(" (inside too large to check)");
 		}
 		if (!Ortho.visible) {
 			b.append(" (hidden: press H)");

@@ -8,7 +8,7 @@ nothing on the server.
 ## Use
 
 1. Aim at a block and press **G**: the shape anchors in front of that face.
-2. Press **J** to pick the shape, its size (widths in blocks, odd or even), hollow/filled, wall
+2. Type `/ortho` (or use Mod Menu, or bind a key under Controls → Ortho) to pick the shape, its size (widths in blocks, odd or even), hollow/filled, wall
    thickness, up axis, spin and tilt.
 3. Build: **blue** = still to place, **green** = done, **orange** = a block inside a hollow 3D shape.
 
@@ -19,6 +19,10 @@ nothing on the server.
   place goes, and the counterpart of the block you aim at.
 
 All keys are rebindable under Controls → Ortho. `/ortho info` shows a summary.
+
+Shapes are limited to 256 blocks per axis and 2,000,000 blocks, so a typo cannot freeze the game.
+Raise the limits with `/ortho limit size <blocks>` (up to 1024) and `/ortho limit blocks <count>`;
+`/ortho limit` shows them. Big shapes use more memory and can lag.
 
 ## Build
 

@@ -23,6 +23,10 @@ public final class OrthoConfig {
 	public int maxDrawn = 4000;
 	/** Draw stencil blocks that already have a block in green. */
 	public boolean showDone = true;
+	/** Largest shape width/height/length in blocks ({@code /ortho limit size}). */
+	public int maxSize = Voxelizer.Limits.DEFAULT_SIZE;
+	/** Largest number of stencil blocks ({@code /ortho limit blocks}). */
+	public int maxBlocks = Voxelizer.Limits.DEFAULT_BLOCKS;
 	/** Mark blocks inside hollow 3D shapes in orange. */
 	public boolean warnInterior = true;
 	/** Anchor and mirror per world or server, keyed by {@code WorldPlacement.key}. */
@@ -42,7 +46,9 @@ public final class OrthoConfig {
 		if (stencil == null) {
 			stencil = new Stencil();
 		}
-		stencil.clamp();
+		maxSize = Math.max(16, Math.min(Voxelizer.Limits.HARD_MAX_SIZE, maxSize));
+		maxBlocks = Math.max(10_000, Math.min(Voxelizer.Limits.HARD_MAX_BLOCKS, maxBlocks));
+		stencil.clamp(maxSize);
 		renderDistance = Math.max(8, Math.min(256, renderDistance));
 		maxDrawn = Math.max(100, Math.min(50_000, maxDrawn));
 		if (worlds == null) {
@@ -58,6 +64,10 @@ public final class OrthoConfig {
 			}
 		}
 		return this;
+	}
+
+	public Voxelizer.Limits limits() {
+		return Voxelizer.Limits.of(maxSize, maxBlocks);
 	}
 
 	public WorldPlacement world(String key) {

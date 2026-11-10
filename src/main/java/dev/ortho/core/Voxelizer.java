@@ -12,8 +12,6 @@ import java.util.function.BooleanSupplier;
  * thinnest one with no face-on gaps.
  */
 public final class Voxelizer {
-	/** Largest grid (cells) one generation may scan. */
-	public static final long MAX_CELLS = 48_000_000L;
 	/** Interior blocks kept for the "blocked interior" check; larger interiors are dropped. */
 	public static final int MAX_INTERIOR = 2_000_000;
 
@@ -27,12 +25,34 @@ public final class Voxelizer {
 		}
 	}
 
-	public static VoxelSet generate(Stencil s, int ax, int ay, int az) {
-		return generate(s, ax, ay, az, () -> false);
+	/**
+	 * Safety limits, so a typo cannot freeze or crash the game.
+	 *
+	 * @param maxSize largest width/height/length of a shape, in blocks
+	 * @param maxBlocks largest number of stencil blocks one shape may have
+	 * @param maxCells largest grid one generation may scan (each cell is two bits of memory)
+	 */
+	public record Limits(int maxSize, int maxBlocks, long maxCells) {
+		public static final int DEFAULT_SIZE = 256;
+		public static final int DEFAULT_BLOCKS = 2_000_000;
+		public static final int HARD_MAX_SIZE = 1024;
+		public static final int HARD_MAX_BLOCKS = 50_000_000;
+		public static final Limits DEFAULT = of(DEFAULT_SIZE, DEFAULT_BLOCKS);
+
+		/** Grid budget grows with the size limit (room for a rotated cube of that size). */
+		public static Limits of(int maxSize, int maxBlocks) {
+			double side = (maxSize + 40) * 1.2;
+			long cells = (long) Math.min(600_000_000d, Math.max(48_000_000d, side * side * side));
+			return new Limits(maxSize, maxBlocks, cells);
+		}
 	}
 
-	public static VoxelSet generate(Stencil s, int ax, int ay, int az, BooleanSupplier cancelled) {
-		s = s.copy().clamp();
+	public static VoxelSet generate(Stencil s, int ax, int ay, int az) {
+		return generate(s, ax, ay, az, Limits.DEFAULT, () -> false);
+	}
+
+	public static VoxelSet generate(Stencil s, int ax, int ay, int az, Limits limits, BooleanSupplier cancelled) {
+		s = s.copy().clamp(limits.maxSize());
 		Orientation rot = Orientation.of(s.up, s.spin, s.tilt);
 		double[] m = rot.m;
 		double slab = 1;
@@ -71,9 +91,9 @@ public final class Voxelizer {
 		int ny = (int) Math.ceil(origin[1] + wmax[1]) + pad - y0;
 		int nz = (int) Math.ceil(origin[2] + wmax[2]) + pad - z0;
 		long cells = (long) nx * ny * nz;
-		if (cells > MAX_CELLS) {
-			throw new Aborted("Shape too large (" + cells / 1_000_000 + "M cells to scan, limit "
-					+ MAX_CELLS / 1_000_000 + "M). Make it smaller or remove the tilt/spin.");
+		if (cells > limits.maxCells()) {
+			throw new Aborted("Shape too large to scan (" + cells / 1_000_000 + "M cells, limit "
+					+ limits.maxCells() / 1_000_000 + "M). Make it smaller or remove the tilt/spin.");
 		}
 		int n = (int) cells;
 		int sxy = nx;
@@ -147,6 +167,11 @@ public final class Voxelizer {
 			}
 		}
 
+		int blocks = shell.cardinality();
+		if (blocks > limits.maxBlocks()) {
+			throw new Aborted(String.format("Shape has %,d blocks, limit is %,d. Make it smaller or hollow, "
+					+ "or raise the limit with /ortho limit blocks <n> (big shapes can lag).", blocks, limits.maxBlocks()));
+		}
 		int[] shellOut = collect(shell, nx, nz, x0, y0, z0, Integer.MAX_VALUE);
 		int[] interiorOut = new int[0];
 		boolean interiorTruncated = false;

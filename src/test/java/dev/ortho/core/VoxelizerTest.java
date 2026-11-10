@@ -314,10 +314,34 @@ class VoxelizerTest {
 	}
 
 	@Test
+	void blockLimitRejectsBigFilledShapesAndCanBeRaised() {
+		Stencil s = stencil(ShapeType.SPHERE);
+		s.sizeX = 61;
+		s.hollow = false;
+		Voxelizer.Limits tight = Voxelizer.Limits.of(256, 100_000);
+		Voxelizer.Aborted e = assertThrows(Voxelizer.Aborted.class, () -> Voxelizer.generate(s, 0, 0, 0, tight, () -> false));
+		assertTrue(e.getMessage().contains("/ortho limit blocks"));
+		s.hollow = true;
+		assertTrue(Voxelizer.generate(s, 0, 0, 0, tight, () -> false).size() > 1000, "hollow version fits");
+		s.hollow = false;
+		assertTrue(Voxelizer.generate(s, 0, 0, 0, Voxelizer.Limits.of(256, 200_000), () -> false).size() > 100_000);
+	}
+
+	@Test
+	void sizeLimitClampsAndCanBeRaised() {
+		Stencil s = stencil(ShapeType.CIRCLE);
+		s.sizeX = 400;
+		VoxelSet def = Voxelizer.generate(s, 0, 0, 0);
+		assertArrayEquals(new int[] {-128, 127}, range(def.shell(), 0), "clamped to 256 by default");
+		VoxelSet big = Voxelizer.generate(s, 0, 0, 0, Voxelizer.Limits.of(512, 2_000_000), () -> false);
+		assertArrayEquals(new int[] {-200, 199}, range(big.shell(), 0));
+	}
+
+	@Test
 	void cancellationStopsGeneration() {
 		Stencil s = stencil(ShapeType.SPHERE);
 		s.sizeX = 101;
-		assertThrows(Voxelizer.Aborted.class, () -> Voxelizer.generate(s, 0, 0, 0, () -> true));
+		assertThrows(Voxelizer.Aborted.class, () -> Voxelizer.generate(s, 0, 0, 0, Voxelizer.Limits.DEFAULT, () -> true));
 	}
 
 	@Test

@@ -10,6 +10,7 @@ import dev.ortho.core.OrthoConfig;
 import dev.ortho.core.ShapeType;
 import dev.ortho.core.Stencil;
 import dev.ortho.core.VoxelSet;
+import dev.ortho.core.Voxelizer;
 
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
@@ -72,9 +73,19 @@ final class OrthoCommands {
 							return ok(c, Ortho.stencil().describe());
 						})))
 				.then(literal("size")
-						.then(argument("x", IntegerArgumentType.integer(1, Stencil.MAX_SIZE)).executes(c -> size(c, 1))
-								.then(argument("y", IntegerArgumentType.integer(1, Stencil.MAX_SIZE)).executes(c -> size(c, 2))
-										.then(argument("z", IntegerArgumentType.integer(1, Stencil.MAX_SIZE)).executes(c -> size(c, 3))))))
+						.then(argument("x", IntegerArgumentType.integer(1, Voxelizer.Limits.HARD_MAX_SIZE)).executes(c -> size(c, 1))
+								.then(argument("y", IntegerArgumentType.integer(1, Voxelizer.Limits.HARD_MAX_SIZE)).executes(c -> size(c, 2))
+										.then(argument("z", IntegerArgumentType.integer(1, Voxelizer.Limits.HARD_MAX_SIZE)).executes(c -> size(c, 3))))))
+				.then(literal("limit")
+						.executes(OrthoCommands::limits)
+						.then(literal("size")
+								.then(literal("default").executes(c -> setSizeLimit(c, Voxelizer.Limits.DEFAULT_SIZE)))
+								.then(argument("blocks", IntegerArgumentType.integer(16, Voxelizer.Limits.HARD_MAX_SIZE))
+										.executes(c -> setSizeLimit(c, IntegerArgumentType.getInteger(c, "blocks")))))
+						.then(literal("blocks")
+								.then(literal("default").executes(c -> setBlockLimit(c, Voxelizer.Limits.DEFAULT_BLOCKS)))
+								.then(argument("count", IntegerArgumentType.integer(10_000, Voxelizer.Limits.HARD_MAX_BLOCKS))
+										.executes(c -> setBlockLimit(c, IntegerArgumentType.getInteger(c, "count"))))))
 				.then(literal("layer")
 						.executes(c -> {
 							OrthoClient.toggleLayer(Minecraft.getInstance());
@@ -89,6 +100,7 @@ final class OrthoCommands {
 							return ok(c, "Layer Y=" + Ortho.layer + " (" + Ortho.voxels.countOnLayer(Ortho.layer) + " blocks)");
 						})))
 				.then(literal("mirror")
+						.executes(OrthoCommands::mirrorStatus)
 						.then(literal("off").executes(c -> {
 							Mirror m = Ortho.mirror();
 							if (m != null) {
@@ -138,16 +150,54 @@ final class OrthoCommands {
 
 	private static int size(CommandContext<FabricClientCommandSource> c, int args) {
 		Stencil s = Ortho.stencil();
+		int limit = Ortho.config.maxSize;
 		int x = IntegerArgumentType.getInteger(c, "x");
+		int y = args >= 2 ? IntegerArgumentType.getInteger(c, "y") : s.sizeY;
+		int z = args >= 3 ? IntegerArgumentType.getInteger(c, "z") : s.sizeZ;
+		if (Math.max(x, Math.max(y, z)) > limit) {
+			return fail(c, "Size limit is " + limit + " blocks. Raise it with /ortho limit size <blocks> (up to "
+					+ Voxelizer.Limits.HARD_MAX_SIZE + ").");
+		}
 		s.sizeX = x;
-		if (args >= 2) {
-			s.sizeY = IntegerArgumentType.getInteger(c, "y");
-		}
-		if (args >= 3) {
-			s.sizeZ = IntegerArgumentType.getInteger(c, "z");
-		}
+		s.sizeY = y;
+		s.sizeZ = z;
 		Ortho.changed();
 		return ok(c, s.describe());
+	}
+
+	private static int limits(CommandContext<FabricClientCommandSource> c) {
+		OrthoConfig cfg = Ortho.config;
+		return ok(c, String.format("Limits: size %d blocks (default %d), %,d blocks per shape (default %,d).%n"
+						+ "Change with /ortho limit size <blocks> or /ortho limit blocks <count> (or 'default'). "
+						+ "Higher limits use more memory and can lag.",
+				cfg.maxSize, Voxelizer.Limits.DEFAULT_SIZE, cfg.maxBlocks, Voxelizer.Limits.DEFAULT_BLOCKS));
+	}
+
+	private static int setSizeLimit(CommandContext<FabricClientCommandSource> c, int v) {
+		Ortho.config.maxSize = v;
+		Ortho.changed();
+		return ok(c, "Size limit set to " + v + " blocks" + (v > Voxelizer.Limits.DEFAULT_SIZE
+				? ". Very large shapes take longer to generate and use more memory." : "."));
+	}
+
+	private static int setBlockLimit(CommandContext<FabricClientCommandSource> c, int v) {
+		Ortho.config.maxBlocks = v;
+		Ortho.changed();
+		return ok(c, String.format("Block limit set to %,d%s", v, v > Voxelizer.Limits.DEFAULT_BLOCKS
+				? ". Shapes this big can lag and use a lot of memory (about 12 bytes per block)." : "."));
+	}
+
+	private static int mirrorStatus(CommandContext<FabricClientCommandSource> c) {
+		Mirror m = Ortho.mirror();
+		if (m == null) {
+			return fail(c, "Not in a world");
+		}
+		String state = m.active()
+				? "Mirror " + m.describe() + ", " + MirrorMarks.size() + " placed blocks tracked."
+				: "Mirror is off.";
+		return ok(c, state + "\n/ortho mirror x|z: plane through the block you stand on\n"
+				+ "/ortho mirror x|z <pos>: exact spot (120 = between blocks, 120.5 = block center)\n"
+				+ "/ortho mirror off");
 	}
 
 	private static int info(CommandContext<FabricClientCommandSource> c) {
@@ -175,6 +225,9 @@ final class OrthoCommands {
 		Mirror m = Ortho.mirror();
 		if (m != null && m.active()) {
 			b.append("\nMirror: ").append(m.describe()).append(", ").append(MirrorMarks.size()).append(" placed blocks tracked");
+		}
+		if (v.interiorTruncated() && Ortho.config.warnInterior) {
+			b.append("\nInside warnings are off for this shape: its interior is too large to check.");
 		}
 		if (Ortho.error != null) {
 			b.append("\n").append(Ortho.error);

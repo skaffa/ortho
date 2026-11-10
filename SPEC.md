@@ -67,7 +67,7 @@ Only blocks within the render distance (default 48) are drawn, nearest first, up
 |---|---|
 | `G` | Anchor at target |
 | `H` | Show/hide stencil |
-| `J` | Open the Ortho screen |
+| (unbound) | Open the Ortho screen (also `/ortho` and Mod Menu) |
 | `Left Alt` + scroll | Nudge layer or anchor Y |
 | (unbound) | Toggle layer mode |
 
@@ -80,7 +80,9 @@ The Ortho screen holds every setting and is also reachable from Mod Menu.
   imports, so it is unit tested with plain JUnit and can be reused by a NeoForge port later.
 * Voxelization runs on a background thread whenever a setting changes; the result is a set of int
   arrays. Each tick only the nearby part is checked against the world and drawn.
-* Size limit 256 per axis and a grid limit, so a typo cannot freeze the game.
+* Limits: 256 blocks per axis and 2,000,000 blocks per shape by default, plus a grid budget that
+  grows with the size limit, so a typo cannot freeze or crash the game. `/ortho limit size|blocks`
+  raises them (hard caps 1024 and 50,000,000).
 
 ## Changes from the first draft
 
@@ -97,7 +99,8 @@ The Ortho screen holds every setting and is also reachable from Mod Menu.
    It now mirrors the blocks you place and your aim target.
 6. **Rotation**: "rotate freely in 15° steps" is kept as spin + tilt, with a note that non-90° steps
    stair-step.
-7. **No key opened the UI** in the draft; `J` does now. `Alt + scroll` would also scroll the
+7. **No key opened the UI** in the draft; there is now a key (unbound by default, since `J` is
+   JourneyMap's), `/ortho` and Mod Menu. `Alt + scroll` would also scroll the
    hotbar; Ortho now blocks that while the modifier is held.
 8. **"Zero FPS impact" was not true as written**: the voxel cache was never the cost; drawing tens
    of thousands of outlines is. Render distance + nearest-first cap fixes that.

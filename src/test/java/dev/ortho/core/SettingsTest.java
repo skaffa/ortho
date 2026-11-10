@@ -38,7 +38,7 @@ class SettingsTest {
 		s.tilt = -20;
 		s.shape = null;
 		s.clamp();
-		assertEquals(Stencil.MAX_SIZE, s.sizeX);
+		assertEquals(Voxelizer.Limits.DEFAULT_SIZE, s.sizeX);
 		assertEquals(3, s.sides);
 		assertEquals(1, s.thickness);
 		assertEquals(45, s.spin);

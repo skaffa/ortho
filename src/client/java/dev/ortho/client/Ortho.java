@@ -116,7 +116,7 @@ public final class Ortho {
 
 	/** Called after any setting change: saves and rebuilds the voxels in the background. */
 	public static void changed() {
-		config.stencil.clamp();
+		config.clamp();
 		markDirty();
 		regenerate();
 	}
@@ -131,6 +131,7 @@ public final class Ortho {
 		}
 		OrthoConfig.WorldPlacement p = placement();
 		Stencil snapshot = config.stencil.copy();
+		Voxelizer.Limits limits = config.limits();
 		int x = p.x;
 		int y = p.y;
 		int z = p.z;
@@ -140,7 +141,7 @@ public final class Ortho {
 				return;
 			}
 			try {
-				VoxelSet v = Voxelizer.generate(snapshot, x, y, z, () -> GENERATION.get() != id);
+				VoxelSet v = Voxelizer.generate(snapshot, x, y, z, limits, () -> GENERATION.get() != id);
 				if (GENERATION.get() == id) {
 					voxels = v;
 					error = null;

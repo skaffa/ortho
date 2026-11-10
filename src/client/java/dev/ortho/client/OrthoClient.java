@@ -40,7 +40,7 @@ public final class OrthoClient implements ClientModInitializer {
 		KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Ortho.MOD_ID, "main"));
 		anchorKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.ortho.anchor", InputConstants.KEY_G, category));
 		toggleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.ortho.toggle", InputConstants.KEY_H, category));
-		screenKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.ortho.screen", InputConstants.KEY_J, category));
+		screenKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.ortho.screen", InputConstants.UNKNOWN.getValue(), category));
 		layerKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.ortho.layer", InputConstants.UNKNOWN.getValue(), category));
 		modifierKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.ortho.modifier", InputConstants.KEY_LALT, category));
 
