@@ -8,6 +8,11 @@
 		"Skaffa",
 		"Claude (Anthropic)"
 	],
+	"contact": {
+		"homepage": "https://github.com/skaffa/ortho",
+		"sources": "https://github.com/skaffa/ortho",
+		"issues": "https://github.com/skaffa/ortho/issues"
+	},
 	"license": "MIT",
 	"icon": "assets/ortho/icon.png",
 	"environment": "client",
