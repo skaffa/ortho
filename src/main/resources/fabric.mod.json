@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "ortho",
+	"version": "${version}",
+	"name": "Ortho",
+	"description": "Client-side geometric stencils: outlines of circles, spheres, domes, arches, toruses and more, block by block, to build by. Sends no packets.",
+	"authors": [
+		"Skaffa",
+		"Claude (Anthropic)"
+	],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.ortho.client.OrthoClient"
+		],
+		"modmenu": [
+			"dev.ortho.client.compat.ModMenuIntegration"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}

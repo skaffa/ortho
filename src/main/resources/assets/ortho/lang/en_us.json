@@ -1,0 +1,8 @@
+{
+	"key.category.ortho.main": "Ortho",
+	"key.ortho.anchor": "Anchor stencil at target",
+	"key.ortho.toggle": "Show/hide stencil",
+	"key.ortho.screen": "Open Ortho settings",
+	"key.ortho.layer": "Toggle layer mode",
+	"key.ortho.modifier": "Nudge modifier (hold + scroll)"
+}
