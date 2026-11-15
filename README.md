@@ -34,4 +34,4 @@ Needs JDK 25.
 ```
 
 The shape math (`src/main/java/dev/ortho/core`) has no Minecraft imports and is tested with plain
-JUnit. See [SPEC.md](SPEC.md) for the design.
+JUnit.
